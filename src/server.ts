@@ -10,6 +10,8 @@ let server: Server | undefined;
 // Start server function
 const startServer = async (): Promise<void> => {
   try {
+    console.log( process.env['NODE_ENV'] )
+    console.log('Initializing MCT Backend Server...');
     logger.info('Starting MCT Backend Server...');
 
     // Test database connection (skip if not available)
