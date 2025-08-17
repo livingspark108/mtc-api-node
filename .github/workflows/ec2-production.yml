@@ -1,4 +1,4 @@
-name: EC2 Deployment Backend
+name: Prodution EC2 Deployment Backend
 
 on:
   push:
