@@ -1,9 +1,10 @@
-name: Staging EC2 Deployment Backend
+name: Staging EC2 Deployment Backend 
 
 on:
   push:
     branches:
       - stage
+  workflow_dispatch: 
 
 jobs:
   deploy:
@@ -80,7 +81,7 @@ jobs:
             fi
 
             echo "[INFO] Checking PM2 status..."
-            $PM2_CMD show mtc_backend || { echo "[ERROR] PM2 service not found"; exit 1; }
+            $PM2_CMD show mtc_backend_stage  || { echo "[ERROR] PM2 service not found"; exit 1; }
 
             echo "[INFO] Deployment finished ✅"
             exit 0
