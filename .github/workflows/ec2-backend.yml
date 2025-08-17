@@ -25,7 +25,7 @@ jobs:
             set -e  # fail on first error
 
             echo "[INFO] Switching to app directory..."
-            cd /mtc_production/mtc-api-node || { echo "[ERROR] Directory not found"; exit 1; }
+            cd ~/mtc_production/mtc-api-node || { echo "[ERROR] Directory not found"; exit 1; }
 
             echo "[INFO] Pulling latest code..."
             if ! git pull origin main; then
