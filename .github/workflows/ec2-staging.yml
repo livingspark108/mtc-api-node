@@ -1,0 +1,86 @@
+name: Staging EC2 Deployment Backend
+
+on:
+  push:
+    branches:
+      - stage
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging   # 👈 use environment secrets
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            echo "[INFO] Loading environment..."
+            source ~/.bashrc || true
+            source ~/.profile || true
+
+            echo "[INFO] Loading NVM..."
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+            echo "[INFO] Using Node version: $(node -v)"
+
+            echo "[INFO] Switching to app directory..."
+            cd ~/mtc_staging/mtc-api-node || { echo "[ERROR] Directory not found"; exit 1; }
+
+            echo "[INFO] Pulling latest code..."
+            if ! git pull origin stage; then
+              echo "[ERROR] Git pull failed"; exit 1;
+            fi
+
+            echo "[INFO] Installing dependencies..."
+            if ! npm install --no-audit --no-fund; then
+              echo "[ERROR] NPM install failed"; exit 1;
+            fi
+
+            echo "[INFO] Updating environment file..."
+            if [ -f env.staging.template ]; then
+              cp env.staging.template .env.ec2
+              echo "[INFO] .env.ec2 updated successfully"
+            else
+              echo "[ERROR] env.staging.template missing"; exit 1;
+            fi
+
+            echo "[INFO] Locating PM2..."
+            PM2_CMD=$(command -v pm2 || true)
+            if [ -z "$PM2_CMD" ]; then
+              echo "[WARN] PM2 not found in PATH, checking NVM bin..."
+              NODE_VERSION=$(node -v | sed 's/^v//')   # e.g. 20.19.4
+              PM2_PATH="$HOME/.nvm/versions/node/v$NODE_VERSION/bin/pm2"
+              if [ -f "$PM2_PATH" ]; then
+                PM2_CMD="$PM2_PATH"
+              else
+                echo "[ERROR] PM2 not found. Install it with: npm install -g pm2"; exit 1;
+              fi
+            fi
+            echo "[INFO] Using PM2 at: $PM2_CMD"
+
+            echo "[INFO] Managing PM2 service..."
+            if $PM2_CMD list | grep -q "mtc_backend_stage"; then
+              echo "[INFO] Restarting existing service..."
+              $PM2_CMD restart mtc_backend_stage || { echo "[ERROR] PM2 restart failed"; exit 1; }
+            else
+              echo "[INFO] Starting new PM2 service..."
+              $PM2_CMD start npm --name "mtc_backend_stage" -- run dev || { echo "[ERROR] PM2 start failed"; exit 1; }
+              $PM2_CMD save
+            fi
+
+            echo "[INFO] Checking PM2 status..."
+            $PM2_CMD show mtc_backend || { echo "[ERROR] PM2 service not found"; exit 1; }
+
+            echo "[INFO] Deployment finished ✅"
+            exit 0
