@@ -1,4 +1,4 @@
-name: Staging EC2 Deployment Backend
+name: Staging EC2 Deployment Backend 
 
 on:
   push:
