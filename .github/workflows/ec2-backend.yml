@@ -19,25 +19,33 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}   # private key for EC2 login
-          script_stop: true                 # 👈 stop if any command fails
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
           script: |
-            set -e  # fail on first error
+            set -e
+            echo "[INFO] Loading environment..."
+            source ~/.bashrc || true
+            source ~/.profile || true
 
-            echo "[INFO] Loading NVM environment..."
+            echo "[INFO] Loading NVM..."
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-            nvm use 20 || { echo "[ERROR] Failed to use Node 20"; exit 1; }
+
+            echo "[INFO] Using Node version: $(node -v)"
 
             echo "[INFO] Switching to app directory..."
             cd ~/mtc_production/mtc-api-node || { echo "[ERROR] Directory not found"; exit 1; }
 
             echo "[INFO] Pulling latest code..."
-            git pull origin main || { echo "[ERROR] Git pull failed"; exit 1; }
+            if ! git pull origin main; then
+              echo "[ERROR] Git pull failed"; exit 1;
+            fi
 
             echo "[INFO] Installing dependencies..."
-            npm install --no-audit --no-fund || { echo "[ERROR] NPM install failed"; exit 1; }
+            if ! npm install --no-audit --no-fund; then
+              echo "[ERROR] NPM install failed"; exit 1;
+            fi
 
             echo "[INFO] Updating environment file..."
             if [ -f env.production.template ]; then
@@ -50,11 +58,13 @@ jobs:
             echo "[INFO] Locating PM2..."
             PM2_CMD=$(command -v pm2 || true)
             if [ -z "$PM2_CMD" ]; then
-              echo "[WARN] PM2 not found in PATH, checking fallback..."
-              if [ -f "$HOME/.nvm/versions/node/v20.19.4/bin/pm2" ]; then
-                PM2_CMD="$HOME/.nvm/versions/node/v20.19.4/bin/pm2"
+              echo "[WARN] PM2 not found in PATH, checking NVM bin..."
+              NODE_VERSION=$(node -v | sed 's/^v//')   # e.g. 20.19.4
+              PM2_PATH="$HOME/.nvm/versions/node/v$NODE_VERSION/bin/pm2"
+              if [ -f "$PM2_PATH" ]; then
+                PM2_CMD="$PM2_PATH"
               else
-                echo "[ERROR] PM2 not found. Try: npm install -g pm2"; exit 1;
+                echo "[ERROR] PM2 not found. Install it with: npm install -g pm2"; exit 1;
               fi
             fi
             echo "[INFO] Using PM2 at: $PM2_CMD"
