@@ -49,18 +49,32 @@ jobs:
               echo "[ERROR] env.production.template missing"; exit 1;
             fi
 
+            echo "[INFO] Locating PM2..."
+            PM2_CMD=$(command -v pm2 || true)
+            if [ -z "$PM2_CMD" ]; then
+              echo "[WARN] PM2 not in PATH, checking fallback..."
+              if [ -f "$HOME/.npm-global/bin/pm2" ]; then
+                PM2_CMD="$HOME/.npm-global/bin/pm2"
+              elif [ -f "$HOME/.nvm/versions/node/$(node -v)/bin/pm2" ]; then
+                PM2_CMD="$HOME/.nvm/versions/node/$(node -v)/bin/pm2"
+              else
+                echo "[ERROR] PM2 not found on server"; exit 1;
+              fi
+            fi
+            echo "[INFO] Using PM2 at: $PM2_CMD"
+
             echo "[INFO] Managing PM2 service..."
-            if pm2 list | grep -q "mtc_backend"; then
+            if $PM2_CMD list | grep -q "mtc_backend"; then
               echo "[INFO] Restarting existing service..."
-              pm2 restart mtc_backend || { echo "[ERROR] PM2 restart failed"; exit 1; }
+              $PM2_CMD restart mtc_backend || { echo "[ERROR] PM2 restart failed"; exit 1; }
             else
               echo "[INFO] Starting new PM2 service..."
-              pm2 start npm --name "mtc_backend" -- run dev || { echo "[ERROR] PM2 start failed"; exit 1; }
-              pm2 save
+              $PM2_CMD start npm --name "mtc_backend" -- run dev || { echo "[ERROR] PM2 start failed"; exit 1; }
+              $PM2_CMD save
             fi
 
             echo "[INFO] Checking PM2 status..."
-            pm2 show mtc_backend || { echo "[ERROR] PM2 service not found"; exit 1; }
+            $PM2_CMD show mtc_backend || { echo "[ERROR] PM2 service not found"; exit 1; }
 
             echo "[INFO] Deployment finished ✅"
             exit 0
