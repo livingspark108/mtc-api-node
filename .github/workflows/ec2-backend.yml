@@ -23,23 +23,21 @@ jobs:
           script_stop: true                 # 👈 stop if any command fails
           script: |
             set -e  # fail on first error
-            echo "[INFO] Loading environment..."
-            source ~/.bashrc || true
-            source ~/.profile || true
-            export PATH=$PATH:$(npm bin -g)
+
+            echo "[INFO] Loading NVM environment..."
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+            nvm use 20 || { echo "[ERROR] Failed to use Node 20"; exit 1; }
 
             echo "[INFO] Switching to app directory..."
             cd ~/mtc_production/mtc-api-node || { echo "[ERROR] Directory not found"; exit 1; }
 
             echo "[INFO] Pulling latest code..."
-            if ! git pull origin main; then
-              echo "[ERROR] Git pull failed"; exit 1;
-            fi
+            git pull origin main || { echo "[ERROR] Git pull failed"; exit 1; }
 
             echo "[INFO] Installing dependencies..."
-            if ! npm install --no-audit --no-fund; then
-              echo "[ERROR] NPM install failed"; exit 1;
-            fi
+            npm install --no-audit --no-fund || { echo "[ERROR] NPM install failed"; exit 1; }
 
             echo "[INFO] Updating environment file..."
             if [ -f env.production.template ]; then
@@ -52,13 +50,11 @@ jobs:
             echo "[INFO] Locating PM2..."
             PM2_CMD=$(command -v pm2 || true)
             if [ -z "$PM2_CMD" ]; then
-              echo "[WARN] PM2 not in PATH, checking fallback..."
-              if [ -f "$HOME/.npm-global/bin/pm2" ]; then
-                PM2_CMD="$HOME/.npm-global/bin/pm2"
-              elif [ -f "$HOME/.nvm/versions/node/$(node -v)/bin/pm2" ]; then
-                PM2_CMD="$HOME/.nvm/versions/node/$(node -v)/bin/pm2"
+              echo "[WARN] PM2 not found in PATH, checking fallback..."
+              if [ -f "$HOME/.nvm/versions/node/v20.19.4/bin/pm2" ]; then
+                PM2_CMD="$HOME/.nvm/versions/node/v20.19.4/bin/pm2"
               else
-                echo "[ERROR] PM2 not found on server"; exit 1;
+                echo "[ERROR] PM2 not found. Try: npm install -g pm2"; exit 1;
               fi
             fi
             echo "[INFO] Using PM2 at: $PM2_CMD"
