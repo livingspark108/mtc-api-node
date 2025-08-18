@@ -94,7 +94,7 @@ const config: Config = {
     env: process.env["NODE_ENV"] || "development",
     port: parseInt(process.env["PORT"] || "4000", 10),
     apiVersion: process.env["API_VERSION"] || "v1",
-    frontendOrigin: process.env["FRONTEND_ORIGIN"] || "http://localhost:3000",
+    frontendOrigin: process.env["FRONTEND_ORIGINS"] || "http://localhost:3000,http://localhost:3001",
   },
   database: {
     host: process.env["DB_HOST"] || "localhost",
