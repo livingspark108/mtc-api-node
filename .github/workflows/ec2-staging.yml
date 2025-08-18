@@ -1,9 +1,9 @@
 name: Staging EC2 Deployment Backend 
 
 on:
-  push:
-    branches:
-      - stage
+  # push:
+  #   branches:
+  #     - stage
   workflow_dispatch: 
 
 jobs:
@@ -71,7 +71,7 @@ jobs:
             echo "[INFO] Using PM2 at: $PM2_CMD"
 
             echo "[INFO] Managing PM2 service..."
-            if $PM2_CMD list | grep -q "mtc_backend_stage"; then
+            if $PM2_CMD describe mtc_backend_stage > /dev/null; then
               echo "[INFO] Restarting existing service..."
               $PM2_CMD restart mtc_backend_stage || { echo "[ERROR] PM2 restart failed"; exit 1; }
             else
