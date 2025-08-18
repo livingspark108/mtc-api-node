@@ -42,7 +42,15 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: config.app.frontendOrigin,
+    origin: function (origin, callback) {
+    const allowedOrigins = config.app.frontendOrigin.split(',').map(o => o.trim()) 
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  // origin: config.app.frontendOrigin,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
